@@ -6,6 +6,8 @@ using Noggog;
 using Mutagen.Bethesda.FormKeys.SkyrimSE;
 using System.Text.RegularExpressions;
 using Mutagen.Bethesda.Plugins.Aspects;
+using Mutagen.Bethesda.Plugins.Records;
+using Mutagen.Bethesda.Strings;
 
 namespace ThrowingStuffVRPatcher
 {
@@ -30,23 +32,24 @@ namespace ThrowingStuffVRPatcher
         public static Dictionary<string, string> poisonDict;
         public static Dictionary<string, string> exclusionsDict;
 
-        static Program() {
+        static Program()
+        {
             // Set the static members
-            alcoholDict = new Dictionary<string, string>(); 
-            glassDict = new Dictionary<string, string>(); 
-            soupDict = new Dictionary<string, string>(); 
-            whiteBombBigDict = new Dictionary<string, string>(); 
-            whiteBombSmallDict = new Dictionary<string, string>(); 
-            blackBombBigDict = new Dictionary<string, string>(); 
-            blackBombSmallDict = new Dictionary<string, string>(); 
-            purseDict = new Dictionary<string, string>(); 
-            nullwhiteDict = new Dictionary<string, string>(); 
-            firebombDict = new Dictionary<string, string>(); 
-            oilbombDict = new Dictionary<string, string>(); 
-            frostbombDict = new Dictionary<string, string>(); 
-            shockbombDict = new Dictionary<string, string>(); 
-            poisonbombDict = new Dictionary<string, string>(); 
-            potionDict = new Dictionary<string, string>(); 
+            alcoholDict = new Dictionary<string, string>();
+            glassDict = new Dictionary<string, string>();
+            soupDict = new Dictionary<string, string>();
+            whiteBombBigDict = new Dictionary<string, string>();
+            whiteBombSmallDict = new Dictionary<string, string>();
+            blackBombBigDict = new Dictionary<string, string>();
+            blackBombSmallDict = new Dictionary<string, string>();
+            purseDict = new Dictionary<string, string>();
+            nullwhiteDict = new Dictionary<string, string>();
+            firebombDict = new Dictionary<string, string>();
+            oilbombDict = new Dictionary<string, string>();
+            frostbombDict = new Dictionary<string, string>();
+            shockbombDict = new Dictionary<string, string>();
+            poisonbombDict = new Dictionary<string, string>();
+            potionDict = new Dictionary<string, string>();
             poisonDict = new Dictionary<string, string>();
             exclusionsDict = new Dictionary<string, string>();
 
@@ -150,12 +153,12 @@ namespace ThrowingStuffVRPatcher
             if (!state.LoadOrder.ContainsKey(ThrowStuff.ModKey))
                 throw new Exception("ERROR: ThrowStuff.esp missing from load order. Check that the esp is enabled.");
 
-            #if DEBUG
+#if DEBUG
             foreach (var mod in state.LoadOrder)
             {
                 Console.WriteLine(mod.Value.ToString());
             }
-            #endif
+#endif
             ////////////////////////////////////////////////////////
             // Read from ThrowStuff_KID.ini
 
@@ -167,292 +170,110 @@ namespace ThrowingStuffVRPatcher
                 string text = reader.ReadToEnd();
 
                 var sections = text.Split(";");
-                foreach (var section in sections)
+                foreach (var rawSection in sections)
                 {
-                    var itemsWithHeader = section.Replace("\r\n", "").Split("Keyword = ");
-                    var items = itemsWithHeader.Skip(1);
+                    var section = rawSection.Trim();
+                    if (section.Length == 0)
+                    {
+                        continue;
+                    }
 
-                    if (section.StartsWith("[D]Alcohol"))
+                    var itemsWithHeader = Regex.Split(
+                        rawSection.Replace("\r\n", ""),
+                        @"Keyword\s*=\s*",
+                        RegexOptions.IgnoreCase);
+                    var items = itemsWithHeader.Skip(1).Where(item => !string.IsNullOrWhiteSpace(item));
+
+                    if (section.StartsWith("[D]Alcohol", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "Alcohol");
-                            } else
-                            {
-                                Program.alcoholDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.alcoholDict, "Alcohol");
                         continue;
                     }
-                    if (section.StartsWith("[D]MaterialGlass"))
+                    if (section.StartsWith("[D]MaterialGlass", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "MaterialGlass");
-                            }
-                            else
-                            {
-                                Program.glassDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.glassDict, "MaterialGlass");
                         continue;
                     }
-                    if (section.StartsWith("[D]isSoup"))
+                    if (section.StartsWith("[D]isSoup", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "isSoup");
-                            }
-                            else
-                            {
-                                Program.soupDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.soupDict, "isSoup");
                         continue;
                     }
-                    if (section.StartsWith("[D]WhiteDustBombBig"))
+                    if (section.StartsWith("[D]WhiteDustBombBig", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "WhiteDustBombBig");
-                            }
-                            else
-                            {
-                                Program.whiteBombBigDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.whiteBombBigDict, "WhiteDustBombBig");
                         continue;
 
                     }
-                    if (section.StartsWith("[D]WhiteDustBombSmall"))
+                    if (section.StartsWith("[D]WhiteDustBombSmall", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "WhiteDustBombSmall");
-                            }
-                            else
-                            {
-                                Program.whiteBombSmallDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.whiteBombSmallDict, "WhiteDustBombSmall");
                         continue;
 
                     }
-                    if (section.StartsWith("[D]BlackDustBombBig"))
+                    if (section.StartsWith("[D]BlackDustBombBig", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "BlackDustBombBig");
-                            }
-                            else
-                            {
-                                Program.blackBombBigDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.blackBombBigDict, "BlackDustBombBig");
                         continue;
 
                     }
-                    if (section.StartsWith("[D]BlackDustBombSmall"))
+                    if (section.StartsWith("[D]BlackDustBombSmall", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "BlackDustBombSmall");
-                            }
-                            else
-                            {
-                                Program.blackBombSmallDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.blackBombSmallDict, "BlackDustBombSmall");
                         continue;
 
                     }
-                    if (section.StartsWith("[D]PurseLarge"))
+                    if (section.StartsWith("[D]PurseLarge", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "PurseLarge");
-                            }
-                            else
-                            {
-                                Program.purseDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.purseDict, "PurseLarge");
                         continue;
 
                     }
-                    if (section.StartsWith("[D]nullWhite"))
+                    if (section.StartsWith("[D]nullWhite", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "nullWhite");
-                            }
-                            else
-                            {
-                                Program.nullwhiteDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.nullwhiteDict, "nullWhite");
                         continue;
 
                     }
-                    if (section.StartsWith("[D]FireBomb"))
+                    if (section.StartsWith("[D]FireBomb", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "FireBomb");
-                            }
-                            else
-                            {
-                                Program.firebombDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.firebombDict, "FireBomb");
                         continue;
 
                     }
-                    if (section.StartsWith("[D]OilBomb"))
+                    if (section.StartsWith("[D]OilBomb", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "OilBomb");
-                            }
-                            else
-                            {
-                                Program.oilbombDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.oilbombDict, "OilBomb");
                         continue;
 
                     }
-                    if (section.StartsWith("[D]FrostBomb"))
+                    if (section.StartsWith("[D]FrostBomb", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "FrostBomb");
-                            }
-                            else
-                            {
-                                Program.frostbombDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.frostbombDict, "FrostBomb");
                         continue;
 
                     }
-                    if (section.StartsWith("[D]ShockBomb"))
+                    if (section.StartsWith("[D]ShockBomb", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "ShockBomb");
-                            }
-                            else
-                            {
-                                Program.shockbombDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.shockbombDict, "ShockBomb");
                         continue;
 
                     }
-                    if (section.StartsWith("[D]PoisonBomb"))
+                    if (section.StartsWith("[D]PoisonBomb", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "PoisonBomb");
-                            }
-                            else
-                            {
-                                Program.poisonbombDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.poisonbombDict, "PoisonBomb");
                         continue;
 
                     }
-                    if (section.StartsWith("[D]isPotion"))
+                    if (section.StartsWith("[D]isPotion", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "isPotion");
-                            }
-                            else
-                            {
-                                Program.potionDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.potionDict, "isPotion");
                         continue;
 
                     }
-                    if (section.StartsWith("[D]IsPoison"))
+                    if (section.StartsWith("[D]IsPoison", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (string item in items)
-                        {
-                            string itemName = item.Substring(item.IndexOf("|", item.IndexOf("|") + 1) + 1);
-                            string itemType = item.Substring(item.IndexOf("|") + 1, item.LastIndexOf("|") - item.IndexOf("|") - 1);
-                            if (itemName.StartsWith("-"))
-                            {
-                                Program.exclusionsDict.Add(Regex.Replace(itemName, "-", "").ToLower(), "IsPoison");
-                            }
-                            else
-                            {
-                                Program.poisonDict.Add(itemName, itemType);
-                            }
-                        }
+                        ProcessIniSection(items, Program.poisonDict, "IsPoison");
                         continue;
 
                     }
@@ -506,65 +327,101 @@ namespace ThrowingStuffVRPatcher
             // patch potions/food/drink
             foreach (var ingestibleGetter in state.LoadOrder.PriorityOrder.Ingestible().WinningContextOverrides())
             {
-                bool addedDestruction = false;
-                    var ingestible = state.PatchMod.Ingestibles.GetOrAddAsOverride(ingestibleGetter.Record);
-                if (ingestible.Destructible == null)
+                var ingestibleRecord = ingestibleGetter.Record;
+                if (ingestibleRecord.Destructible != null)
                 {
-                    foreach (var keyword in ingestible.Keywords.EmptyIfNull())
+                    continue;
+                }
+
+                var ingestibleName = GetNameString(ingestibleRecord);
+                if (string.IsNullOrWhiteSpace(ingestibleName))
+                {
+                    Console.WriteLine("Name unresolved for ingestible " + ingestibleRecord.FormKey + " from " + ingestibleGetter.ModKey + "; falling back to keyword/flag detection.");
+                }
+
+                bool addedDestruction = false;
+                foreach (var keyword in ingestibleRecord.Keywords.EmptyIfNull())
+                {
+                    if (!state.LinkCache.TryResolveIdentifier(Skyrim.Keyword.VendorItemPotion, out var potionKeyword) ||
+                        !state.LinkCache.TryResolveIdentifier(Skyrim.Keyword.VendorItemPoison, out var poisonKeyword) ||
+                        !state.LinkCache.TryResolveIdentifier(keyword, out var ourKeyword))
                     {
-                        if (!state.LinkCache.TryResolveIdentifier(Skyrim.Keyword.VendorItemPotion, out var potionKeyword) || !state.LinkCache.TryResolveIdentifier(Skyrim.Keyword.VendorItemPoison, out var poisonKeyword) || !state.LinkCache.TryResolveIdentifier(keyword, out var ourKeyword))
-                        {
-                            Console.WriteLine("Failed to find keywords while checking Ingestible " + ingestible.Name + " from " + ingestibleGetter.ModKey);
-                            // handle if it's not found.
-                            continue;
-                        }
-
-                        // Potions/Poisons
-                        if (ingestible.Name?.String != null && ingestible.Name.String.ToLower().Contains("potion") || ingestible.Name?.String != null && ingestible.Name.String.ToLower().Contains("poison")
-                            || ourKeyword == potionKeyword || ourKeyword == poisonKeyword || ingestible.Flags.HasFlag(Ingestible.Flag.Poison) || (!ingestible.Flags.HasFlag(Ingestible.Flag.FoodItem) && !ingestible.Flags.HasFlag(Ingestible.Flag.Medicine)))
-                        {
-                            addDestruction(ingestible);
-
-                            if (ingestible.Destructible?.Stages.Count == 8)
-                            {
-                                Console.WriteLine("Added destruction to Potion/Poison \"" + ingestible.Name + "\" from " + ingestibleGetter.ModKey);
-                            }
-                            else
-                            {
-                                Console.WriteLine("Failed to add destruction to Potion/Poison \"" + ingestible.Name + "\" from " + ingestibleGetter.ModKey);
-                            }
-                            addedDestruction = true;
-                            break;
-                        }
-
+                        Console.WriteLine("Failed to find keywords while checking Ingestible " + ingestibleRecord.Name + " from " + ingestibleGetter.ModKey);
+                        continue;
                     }
-                    // Everything else
-                    if (!addedDestruction)
+
+                    if ((ingestibleName?.Contains("potion", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (ingestibleName?.Contains("poison", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        ourKeyword == potionKeyword || ourKeyword == poisonKeyword ||
+                        ingestibleRecord.Flags.HasFlag(Ingestible.Flag.Poison) ||
+                        (!ingestibleRecord.Flags.HasFlag(Ingestible.Flag.FoodItem) && !ingestibleRecord.Flags.HasFlag(Ingestible.Flag.Medicine)))
                     {
-                        patchINIitems(ingestible, ingestibleGetter.ModKey);
+                        var ingestible = state.PatchMod.Ingestibles.GetOrAddAsOverride(ingestibleRecord);
+                        addDestruction(ingestible);
+
+                        if (ingestible.Destructible?.Stages.Count == 8)
+                        {
+                            Console.WriteLine("Added destruction to Potion/Poison \"" + ingestible.Name + "\" from " + ingestibleGetter.ModKey);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Failed to add destruction to Potion/Poison \"" + ingestible.Name + "\" from " + ingestibleGetter.ModKey);
+                        }
+                        addedDestruction = true;
+                        break;
                     }
+
+                }
+
+                if (!addedDestruction)
+                {
+                    patchINIitems<IIngestibleGetter, IIngestible>(
+                        ingestibleRecord,
+                        ingestibleGetter.ModKey,
+                        () => state.PatchMod.Ingestibles.GetOrAddAsOverride(ingestibleRecord));
                 }
             }
 
             // patch ingredients
             foreach (var ingredientGetter in state.LoadOrder.PriorityOrder.Ingredient().WinningContextOverrides())
             {
-                var ingredient = state.PatchMod.Ingredients.GetOrAddAsOverride(ingredientGetter.Record);
-                if (ingredient.Destructible == null)
+                var ingredientRecord = ingredientGetter.Record;
+                if (ingredientRecord.Destructible != null)
                 {
-                    patchINIitems(ingredient, ingredientGetter.ModKey);
+                    continue;
                 }
+
+                if (!HasResolvableName(ingredientRecord))
+                {
+                    Console.WriteLine("Skipping ingredient " + ingredientRecord.FormKey + " from " + ingredientGetter.ModKey + " because its name could not be resolved.");
+                    continue;
+                }
+
+                patchINIitems<IIngredientGetter, IIngredient>(
+                    ingredientRecord,
+                    ingredientGetter.ModKey,
+                    () => state.PatchMod.Ingredients.GetOrAddAsOverride(ingredientRecord));
             }
 
             // patch misc items
             foreach (var miscItemGetter in state.LoadOrder.PriorityOrder.MiscItem().WinningContextOverrides())
             {
-                var miscItem = state.PatchMod.MiscItems.GetOrAddAsOverride(miscItemGetter.Record);
-
-                if (miscItem.Destructible == null)
+                var miscItemRecord = miscItemGetter.Record;
+                if (miscItemRecord.Destructible != null)
                 {
-                    patchINIitems(miscItem, miscItemGetter.ModKey);
+                    continue;
                 }
+
+                if (!HasResolvableName(miscItemRecord))
+                {
+                    Console.WriteLine("Skipping misc item " + miscItemRecord.FormKey + " from " + miscItemGetter.ModKey + " because its name could not be resolved.");
+                    continue;
+                }
+
+                patchINIitems<IMiscItemGetter, IMiscItem>(
+                    miscItemRecord,
+                    miscItemGetter.ModKey,
+                    () => state.PatchMod.MiscItems.GetOrAddAsOverride(miscItemRecord));
             }
         }
 
@@ -578,37 +435,135 @@ namespace ThrowingStuffVRPatcher
 
         }
 
-        static void patchINIitems<T>(T myObject, ModKey modKey)
-            where T : INamedGetter, ISkyrimMajorRecordGetter, IHasDestructible
+        static void ProcessIniSection(IEnumerable<string> items, Dictionary<string, string> targetDict, string sectionName)
         {
-
-            #if DEBUG
-                if (myObject.Name?.Contains("flour", StringComparison.OrdinalIgnoreCase) ?? false)
-                    System.Diagnostics.Debugger.Break();
-            #endif
-            string type = myObject.GetType().ToString().Substring(myObject.GetType().ToString().LastIndexOf(".") + 1);
-            switch (type)
+            foreach (var item in items)
             {
-                case "Ingestible":
-                    type = "Potion";
-                    break;
-                case "MiscItem":
-                    type = "Misc Item";
-                    break;
-            }
-
-            // Patch Alcohol
-            if (Program.alcoholDict.Any(alcohol => 
-                isValidObject(alcohol, myObject, type, "Alcohol")))
-            {
-                addDestruction(myObject);
-                if (myObject.Destructible?.Stages.Count == 8)
+                if (!TryParseIniEntry(item, out var itemName, out var itemType))
                 {
-                    Console.WriteLine("Added destruction to " + type + " Alcohol \"" + myObject.Name + "\" from " + modKey);
+                    continue;
+                }
+
+                if (itemName.StartsWith("-", StringComparison.Ordinal))
+                {
+                    Program.exclusionsDict[Regex.Replace(itemName, "-", "").ToLowerInvariant()] = sectionName;
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " Alcohol \"" + myObject.Name + "\" from " + modKey);
+                    targetDict[itemName] = itemType;
+                }
+            }
+        }
+
+        static bool TryParseIniEntry(string rawItem, out string itemName, out string itemType)
+        {
+            itemName = string.Empty;
+            itemType = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(rawItem))
+            {
+                return false;
+            }
+
+            var normalized = rawItem.Trim();
+            var firstPipe = normalized.IndexOf("|", StringComparison.Ordinal);
+            var lastPipe = normalized.LastIndexOf("|", StringComparison.Ordinal);
+
+            if (firstPipe == -1 || lastPipe == -1 || lastPipe <= firstPipe)
+            {
+                return false;
+            }
+
+            itemType = normalized.Substring(firstPipe + 1, lastPipe - firstPipe - 1).Trim();
+            itemName = normalized.Substring(lastPipe + 1).Trim();
+
+            return itemType.Length > 0 && itemName.Length > 0;
+        }
+
+        static bool HasResolvableName(INamedGetter record)
+        {
+            return !string.IsNullOrWhiteSpace(GetNameString(record));
+        }
+
+        static string? GetNameString(INamedGetter record)
+        {
+            if (record is ITranslatedNamedGetter translatedNamed)
+            {
+                var translated = translatedNamed.Name;
+                if (translated == null)
+                {
+                    return null;
+                }
+
+                if (!string.IsNullOrWhiteSpace(translated.String))
+                {
+                    return translated.String;
+                }
+
+                if (translated.TryLookup(TranslatedString.DefaultLanguage, out var defaultLanguageName) &&
+                    !string.IsNullOrWhiteSpace(defaultLanguageName))
+                {
+                    return defaultLanguageName;
+                }
+
+                if (translated.TryLookup(translated.TargetLanguage, out var targetLanguageName) &&
+                    !string.IsNullOrWhiteSpace(targetLanguageName))
+                {
+                    return targetLanguageName;
+                }
+            }
+
+            var nameValue = record.Name;
+            if (!string.IsNullOrWhiteSpace(nameValue))
+            {
+                return nameValue;
+            }
+
+            if (record is IMajorRecordGetter major && !string.IsNullOrWhiteSpace(major.EditorID))
+            {
+                return major.EditorID;
+            }
+
+            return null;
+        }
+
+        static void patchINIitems<TGetter, TSetter>(TGetter myObject, ModKey modKey, Func<TSetter> getOrAddOverride)
+            where TGetter : class, INamedGetter, ISkyrimMajorRecordGetter, IHasDestructibleGetter
+            where TSetter : class, TGetter, IHasDestructible
+        {
+
+#if DEBUG
+            if (myObject.Name?.Contains("flour", StringComparison.OrdinalIgnoreCase) ?? false)
+                System.Diagnostics.Debugger.Break();
+#endif
+            string type = myObject switch
+            {
+                IIngestibleGetter => "Potion",
+                IMiscItemGetter => "Misc Item",
+                IIngredientGetter => "Ingredient",
+                _ => myObject.GetType().Name
+            };
+
+            TSetter? editable = null;
+            TSetter EnsureEditable()
+            {
+                editable ??= getOrAddOverride();
+                return editable;
+            }
+
+            // Patch Alcohol
+            if (Program.alcoholDict.Any(alcohol =>
+                isValidObject(alcohol, myObject, type, "Alcohol")))
+            {
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target.Destructible?.Stages.Count == 8)
+                {
+                    Console.WriteLine("Added destruction to " + type + " Alcohol \"" + target.Name + "\" from " + modKey);
+                }
+                else
+                {
+                    Console.WriteLine("Failed to add destruction to " + type + " Alcohol \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -618,14 +573,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.glassDict.Any(glass =>
             isValidObject(glass, myObject, type, "MaterialGlass")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " Glass Object \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " Glass Object \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " Glass Object \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " Glass Object \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
             }
@@ -634,14 +590,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.soupDict.Any(soup =>
                 isValidObject(soup, myObject, type, "isSoup")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " Soup \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " Soup \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " Soup \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " Soup \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -651,14 +608,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.whiteBombBigDict.Any(bomb =>
                 isValidObject(bomb, myObject, type, "WhiteDustBombBig")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " WhiteDustBombBig \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " WhiteDustBombBig \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " WhiteDustBombBig \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " WhiteDustBombBig \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -668,14 +626,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.whiteBombSmallDict.Any(bomb =>
                 isValidObject(bomb, myObject, type, "WhiteDustBombSmall")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " WhiteDustBombSmall \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " WhiteDustBombSmall \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " WhiteDustBombSmall \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " WhiteDustBombSmall \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -685,14 +644,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.blackBombBigDict.Any(bomb =>
                 isValidObject(bomb, myObject, type, "BlackDustBombBig")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " BlackDustBombBig \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " BlackDustBombBig \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " BlackDustBombBig \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " BlackDustBombBig \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -702,14 +662,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.blackBombSmallDict.Any(bomb =>
                 isValidObject(bomb, myObject, type, "BlackDustBombSmall")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " BlackDustBombSmall \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " BlackDustBombSmall \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " BlackDustBombSmall \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " BlackDustBombSmall \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -719,14 +680,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.purseDict.Any(purse =>
                 isValidObject(purse, myObject, type, "PurseLarge")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " Coin purse \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " Coin purse \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " Coin purse \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " Coin purse \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -736,14 +698,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.nullwhiteDict.Any(bomb =>
                 isValidObject(bomb, myObject, type, "nullWhite")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " nullWhite \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " nullWhite \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " nullWhite \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " nullWhite \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -753,14 +716,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.firebombDict.Any(bomb =>
                 isValidObject(bomb, myObject, type, "FireBomb")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " Firebomb \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " Firebomb \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " Firebomb \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " Firebomb \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -770,14 +734,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.oilbombDict.Any(bomb =>
                 isValidObject(bomb, myObject, type, "OilBomb")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " Oilbomb \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " Oilbomb \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " Oilbomb \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " Oilbomb \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -787,14 +752,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.frostbombDict.Any(bomb =>
                 isValidObject(bomb, myObject, type, "FrostBomb")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " Frostbomb \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " Frostbomb \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " Frostbomb \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " Frostbomb \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -804,14 +770,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.shockbombDict.Any(bomb =>
                 isValidObject(bomb, myObject, type, "ShockBomb")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " Shockbomb \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " Shockbomb \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " Shockbomb \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " Shockbomb \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -821,14 +788,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.poisonbombDict.Any(bomb =>
                 isValidObject(bomb, myObject, type, "PoisonBomb")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " Poisonbomb \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " Poisonbomb \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " Poisonbomb \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " Poisonbomb \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -838,14 +806,15 @@ namespace ThrowingStuffVRPatcher
             if (Program.potionDict.Any(potion =>
                 isValidObject(potion, myObject, type, "isPotion")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " Potion \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " Potion \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " Potion \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " Potion \"" + target?.Name + "\" from " + modKey);
                 }
                 return;
 
@@ -855,33 +824,48 @@ namespace ThrowingStuffVRPatcher
             if (Program.poisonDict.Any(poison =>
                 isValidObject(poison, myObject, type, "IsPoison")))
             {
-                addDestruction(myObject);
-                if (myObject?.Destructible?.Stages.Count == 8)
+                var target = EnsureEditable();
+                addDestruction(target);
+                if (target?.Destructible?.Stages.Count == 8)
                 {
-                    Console.WriteLine("Added destruction to " + type + " Poison \"" + myObject.Name + "\" from " + modKey);
+                    Console.WriteLine("Added destruction to " + type + " Poison \"" + target.Name + "\" from " + modKey);
                 }
                 else
                 {
-                    Console.WriteLine("Failed to add destruction to " + type + " Poison \"" + myObject?.Name + "\" from " + modKey);
+                    Console.WriteLine("Failed to add destruction to " + type + " Poison \"" + target?.Name + "\" from " + modKey);
                 }
-                return;
-
             }
         }
 
-        static bool isValidObject(KeyValuePair<string, string> entry, dynamic myObject, string type, string section)
+        static bool isValidObject<T>(KeyValuePair<string, string> entry, T myObject, string type, string section)
+            where T : INamedGetter
         {
-            if (myObject?.Name?.String != null)
+            var objectName = GetNameString(myObject);
+            if (string.IsNullOrWhiteSpace(objectName))
             {
-                if (Program.exclusionsDict.TryGetValue(myObject?.Name.String?.ToLower(), out string exclusionType))
-                {
-                    return myObject?.Name?.String != null && (myObject?.Name.String.ToLower().Contains(Regex.Replace(entry.Key.ToLower(), "-|\\+|\\*", "")) && entry.Key.Contains("*") || (entry.Key.ToLower().Equals(myObject?.Name.String.ToLower()))) && entry.Value.Equals(type)
-                    && !(Program.exclusionsDict.ContainsKey(myObject?.Name.String.ToLower()) && exclusionType == section);
-                }
+                return false;
             }
-            return myObject?.Name?.String != null && 
-                (myObject?.Name.String.ToLower().Contains(Regex.Replace(entry.Key.ToLower(), "-|\\+|\\*", "")) && entry.Key.Contains("*") || entry.Key.ToLower().Equals(myObject?.Name.String.ToLower())) && 
-                entry.Value.Equals(type);
+
+            if (!string.Equals(entry.Value, type, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var normalizedName = objectName!.ToLowerInvariant();
+            var normalizedEntry = entry.Key.ToLowerInvariant();
+            var normalizedPattern = Regex.Replace(normalizedEntry, "-|\\+|\\*", "");
+            var hasWildcard = entry.Key.IndexOf('*') >= 0;
+            var matches = hasWildcard
+                ? normalizedName.Contains(normalizedPattern, StringComparison.Ordinal)
+                : normalizedEntry.Equals(normalizedName, StringComparison.Ordinal);
+
+            if (!matches)
+            {
+                return false;
+            }
+
+            return !(Program.exclusionsDict.TryGetValue(normalizedName, out var exclusionType) &&
+                string.Equals(exclusionType, section, StringComparison.OrdinalIgnoreCase));
         }
     }
 }
