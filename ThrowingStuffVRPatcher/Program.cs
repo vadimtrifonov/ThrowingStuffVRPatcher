@@ -1,58 +1,29 @@
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Synthesis;
 using Mutagen.Bethesda.Skyrim;
-using Mutagen.Bethesda.Plugins;
+using Mutagen.Bethesda.Plugins.Aspects;
+using Mutagen.Bethesda.Plugins.Cache;
 using Noggog;
 using Mutagen.Bethesda.FormKeys.SkyrimSE;
-using System.Text.RegularExpressions;
-using Mutagen.Bethesda.Plugins.Aspects;
-using Mutagen.Bethesda.Plugins.Records;
-using Mutagen.Bethesda.Strings;
 
 namespace ThrowingStuffVRPatcher
 {
     public class Program
     {
         public static IEnumerable<DestructionStage>? destructionStages;
-        public static Dictionary<string, string> alcoholDict;
-        public static Dictionary<string, string> glassDict;
-        public static Dictionary<string, string> soupDict;
-        public static Dictionary<string, string> whiteBombBigDict;
-        public static Dictionary<string, string> whiteBombSmallDict;
-        public static Dictionary<string, string> blackBombBigDict;
-        public static Dictionary<string, string> blackBombSmallDict;
-        public static Dictionary<string, string> purseDict;
-        public static Dictionary<string, string> nullwhiteDict;
-        public static Dictionary<string, string> firebombDict;
-        public static Dictionary<string, string> oilbombDict;
-        public static Dictionary<string, string> frostbombDict;
-        public static Dictionary<string, string> shockbombDict;
-        public static Dictionary<string, string> poisonbombDict;
-        public static Dictionary<string, string> potionDict;
-        public static Dictionary<string, string> poisonDict;
-        public static Dictionary<string, string> exclusionsDict;
+
+        // ThrowStuff_KID.ini marks these keywords with [D]: items that carry them disappear on impact, which needs destruction data.
+        static readonly HashSet<string> destructionKeywords = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Alcohol", "MaterialGlass", "isSoup", "WhiteDustBombBig", "WhiteDustBombSmall", "BlackDustBombBig", "BlackDustBombSmall",
+            "PurseLarge", "PurseMedium", "PurseSmall", "nullWhite", "FireBomb", "OilBomb", "FrostBomb", "ShockBomb", "PoisonBomb",
+            "isPotion", "IsPoison",
+        };
+
+        record DestructionRule(string Keyword, string ItemType, string[] Names, string[] Exclusions);
 
         static Program()
         {
-            // Set the static members
-            alcoholDict = new Dictionary<string, string>();
-            glassDict = new Dictionary<string, string>();
-            soupDict = new Dictionary<string, string>();
-            whiteBombBigDict = new Dictionary<string, string>();
-            whiteBombSmallDict = new Dictionary<string, string>();
-            blackBombBigDict = new Dictionary<string, string>();
-            blackBombSmallDict = new Dictionary<string, string>();
-            purseDict = new Dictionary<string, string>();
-            nullwhiteDict = new Dictionary<string, string>();
-            firebombDict = new Dictionary<string, string>();
-            oilbombDict = new Dictionary<string, string>();
-            frostbombDict = new Dictionary<string, string>();
-            shockbombDict = new Dictionary<string, string>();
-            poisonbombDict = new Dictionary<string, string>();
-            potionDict = new Dictionary<string, string>();
-            poisonDict = new Dictionary<string, string>();
-            exclusionsDict = new Dictionary<string, string>();
-
             /////////////////////////////////////////////////////////
             // Destruction Stages
 
@@ -162,122 +133,12 @@ namespace ThrowingStuffVRPatcher
             ////////////////////////////////////////////////////////
             // Read from ThrowStuff_KID.ini
 
+            List<DestructionRule> rules;
             try
             {
                 Console.WriteLine("\n\nTrying to read ThrowStuff_KID.ini from " + state.DataFolderPath);
-                using StreamReader reader = new(state.DataFolderPath + "\\ThrowStuff_KID.ini");
-                Console.WriteLine("Found ThrowStuff_KID.ini");
-                string text = reader.ReadToEnd();
-
-                var sections = text.Split(";");
-                foreach (var rawSection in sections)
-                {
-                    var section = rawSection.Trim();
-                    if (section.Length == 0)
-                    {
-                        continue;
-                    }
-
-                    var itemsWithHeader = Regex.Split(
-                        rawSection.Replace("\r\n", ""),
-                        @"Keyword\s*=\s*",
-                        RegexOptions.IgnoreCase);
-                    var items = itemsWithHeader.Skip(1).Where(item => !string.IsNullOrWhiteSpace(item));
-
-                    if (section.StartsWith("[D]Alcohol", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.alcoholDict, "Alcohol");
-                        continue;
-                    }
-                    if (section.StartsWith("[D]MaterialGlass", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.glassDict, "MaterialGlass");
-                        continue;
-                    }
-                    if (section.StartsWith("[D]isSoup", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.soupDict, "isSoup");
-                        continue;
-                    }
-                    if (section.StartsWith("[D]WhiteDustBombBig", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.whiteBombBigDict, "WhiteDustBombBig");
-                        continue;
-
-                    }
-                    if (section.StartsWith("[D]WhiteDustBombSmall", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.whiteBombSmallDict, "WhiteDustBombSmall");
-                        continue;
-
-                    }
-                    if (section.StartsWith("[D]BlackDustBombBig", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.blackBombBigDict, "BlackDustBombBig");
-                        continue;
-
-                    }
-                    if (section.StartsWith("[D]BlackDustBombSmall", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.blackBombSmallDict, "BlackDustBombSmall");
-                        continue;
-
-                    }
-                    if (section.StartsWith("[D]PurseLarge", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.purseDict, "PurseLarge");
-                        continue;
-
-                    }
-                    if (section.StartsWith("[D]nullWhite", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.nullwhiteDict, "nullWhite");
-                        continue;
-
-                    }
-                    if (section.StartsWith("[D]FireBomb", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.firebombDict, "FireBomb");
-                        continue;
-
-                    }
-                    if (section.StartsWith("[D]OilBomb", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.oilbombDict, "OilBomb");
-                        continue;
-
-                    }
-                    if (section.StartsWith("[D]FrostBomb", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.frostbombDict, "FrostBomb");
-                        continue;
-
-                    }
-                    if (section.StartsWith("[D]ShockBomb", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.shockbombDict, "ShockBomb");
-                        continue;
-
-                    }
-                    if (section.StartsWith("[D]PoisonBomb", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.poisonbombDict, "PoisonBomb");
-                        continue;
-
-                    }
-                    if (section.StartsWith("[D]isPotion", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.potionDict, "isPotion");
-                        continue;
-
-                    }
-                    if (section.StartsWith("[D]IsPoison", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIniSection(items, Program.poisonDict, "IsPoison");
-                        continue;
-
-                    }
-                }
+                rules = ReadDestructionRules(state.DataFolderPath + "\\ThrowStuff_KID.ini");
+                Console.WriteLine("Found ThrowStuff_KID.ini with " + rules.Count + " destruction rules");
             }
             catch (IOException e)
             {
@@ -289,583 +150,167 @@ namespace ThrowingStuffVRPatcher
             //////////////////////////////////////////////////////////
             // Begin patch
             // patch onmo coin purse
-            foreach (var floraGetter in state.LoadOrder.PriorityOrder.Flora().WinningContextOverrides())
+            foreach (var floraContext in state.LoadOrder.PriorityOrder.Flora().WinningContextOverrides())
             {
-                if (floraGetter.ModKey == "DropOnDeath.esp" || floraGetter.ModKey == "JS Purses and Septims SE Patch.esp")
+                if (floraContext.ModKey != "DropOnDeath.esp" && floraContext.ModKey != "JS Purses and Septims SE Patch.esp")
                 {
-                    var flora = state.PatchMod.Florae.GetOrAddAsOverride(floraGetter.Record);
+                    continue;
+                }
 
-                    addDestruction(flora);
-
+                var flora = AddDestruction(state.PatchMod, floraContext, "Flora");
+                if (flora != null && floraContext.ModKey == "DropOnDeath.esp")
+                {
                     flora.Keywords ??= new();
-
-                    if (floraGetter.ModKey == "DropOnDeath.esp")
-                    {
-                        flora.Keywords?.Add(ThrowStuff.Keyword.onmoPurse);
-                        if (flora.Keywords.EmptyIfNull().Contains(ThrowStuff.Keyword.onmoPurse))
-                        {
-                            Console.WriteLine("Added keyword \"" + ThrowStuff.Keyword.onmoPurse.ResolveIdentifier(state.LinkCache) + "\" to " + flora?.Name);
-                        }
-                        else
-                        {
-                            Console.WriteLine("Failed to add keyword \"" + ThrowStuff.Keyword.onmoPurse.ToString() + "\" to " + flora?.Name);
-                        }
-                    }
-
-                    if (flora?.Destructible?.Stages.Count == 8)
-                    {
-                        Console.WriteLine("Added destruction to \"" + flora?.Name + "\" from " + floraGetter.ModKey);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Failed to add destruction to Potion/Poison \"" + flora?.Name + "\" from " + floraGetter.ModKey);
-                    }
-
+                    flora.Keywords.Add(ThrowStuff.Keyword.onmoPurse);
+                    Console.WriteLine("Added keyword onmoPurse to \"" + flora.Name + "\" from " + floraContext.ModKey);
                 }
             }
 
             // patch potions/food/drink
-            foreach (var ingestibleGetter in state.LoadOrder.PriorityOrder.Ingestible().WinningContextOverrides())
+            foreach (var ingestibleContext in state.LoadOrder.PriorityOrder.Ingestible().WinningContextOverrides())
             {
-                var ingestibleRecord = ingestibleGetter.Record;
-                if (ingestibleRecord.Destructible != null)
+                var ingestible = ingestibleContext.Record;
+                if (ingestible.Destructible != null)
                 {
                     continue;
                 }
 
-                var ingestibleName = GetNameString(ingestibleRecord);
-                if (string.IsNullOrWhiteSpace(ingestibleName))
+                if (IsPotionOrPoison(ingestible))
                 {
-                    Console.WriteLine("Name unresolved for ingestible " + ingestibleRecord.FormKey + " from " + ingestibleGetter.ModKey + "; falling back to keyword/flag detection.");
+                    AddDestruction(state.PatchMod, ingestibleContext, "Potion/Poison");
+                    continue;
                 }
 
-                bool addedDestruction = false;
-                foreach (var keyword in ingestibleRecord.Keywords.EmptyIfNull())
+                var keyword = FindDestructionKeyword(rules, "Potion", ingestible);
+                if (keyword != null)
                 {
-                    if (!state.LinkCache.TryResolveIdentifier(Skyrim.Keyword.VendorItemPotion, out var potionKeyword) ||
-                        !state.LinkCache.TryResolveIdentifier(Skyrim.Keyword.VendorItemPoison, out var poisonKeyword) ||
-                        !state.LinkCache.TryResolveIdentifier(keyword, out var ourKeyword))
-                    {
-                        Console.WriteLine("Failed to find keywords while checking Ingestible " + ingestibleRecord.Name + " from " + ingestibleGetter.ModKey);
-                        continue;
-                    }
-
-                    if ((ingestibleName?.Contains("potion", StringComparison.OrdinalIgnoreCase) ?? false) ||
-                        (ingestibleName?.Contains("poison", StringComparison.OrdinalIgnoreCase) ?? false) ||
-                        ourKeyword == potionKeyword || ourKeyword == poisonKeyword ||
-                        ingestibleRecord.Flags.HasFlag(Ingestible.Flag.Poison) ||
-                        (!ingestibleRecord.Flags.HasFlag(Ingestible.Flag.FoodItem) && !ingestibleRecord.Flags.HasFlag(Ingestible.Flag.Medicine)))
-                    {
-                        var ingestible = state.PatchMod.Ingestibles.GetOrAddAsOverride(ingestibleRecord);
-                        addDestruction(ingestible);
-
-                        if (ingestible.Destructible?.Stages.Count == 8)
-                        {
-                            Console.WriteLine("Added destruction to Potion/Poison \"" + ingestible.Name + "\" from " + ingestibleGetter.ModKey);
-                        }
-                        else
-                        {
-                            Console.WriteLine("Failed to add destruction to Potion/Poison \"" + ingestible.Name + "\" from " + ingestibleGetter.ModKey);
-                        }
-                        addedDestruction = true;
-                        break;
-                    }
-
-                }
-
-                if (!addedDestruction)
-                {
-                    patchINIitems<IIngestibleGetter, IIngestible>(
-                        ingestibleRecord,
-                        ingestibleGetter.ModKey,
-                        () => state.PatchMod.Ingestibles.GetOrAddAsOverride(ingestibleRecord));
+                    AddDestruction(state.PatchMod, ingestibleContext, "Potion " + keyword);
                 }
             }
 
             // patch ingredients
-            foreach (var ingredientGetter in state.LoadOrder.PriorityOrder.Ingredient().WinningContextOverrides())
+            foreach (var ingredientContext in state.LoadOrder.PriorityOrder.Ingredient().WinningContextOverrides())
             {
-                var ingredientRecord = ingredientGetter.Record;
-                if (ingredientRecord.Destructible != null)
+                if (ingredientContext.Record.Destructible == null &&
+                    FindDestructionKeyword(rules, "Ingredient", ingredientContext.Record) is { } keyword)
                 {
-                    continue;
+                    AddDestruction(state.PatchMod, ingredientContext, "Ingredient " + keyword);
                 }
-
-                if (!HasResolvableName(ingredientRecord))
-                {
-                    Console.WriteLine("Skipping ingredient " + ingredientRecord.FormKey + " from " + ingredientGetter.ModKey + " because its name could not be resolved.");
-                    continue;
-                }
-
-                patchINIitems<IIngredientGetter, IIngredient>(
-                    ingredientRecord,
-                    ingredientGetter.ModKey,
-                    () => state.PatchMod.Ingredients.GetOrAddAsOverride(ingredientRecord));
             }
 
             // patch misc items
-            foreach (var miscItemGetter in state.LoadOrder.PriorityOrder.MiscItem().WinningContextOverrides())
+            foreach (var miscItemContext in state.LoadOrder.PriorityOrder.MiscItem().WinningContextOverrides())
             {
-                var miscItemRecord = miscItemGetter.Record;
-                if (miscItemRecord.Destructible != null)
+                if (miscItemContext.Record.Destructible == null &&
+                    FindDestructionKeyword(rules, "Misc Item", miscItemContext.Record) is { } keyword)
+                {
+                    AddDestruction(state.PatchMod, miscItemContext, "Misc Item " + keyword);
+                }
+            }
+        }
+
+        // Reads `Keyword = Keyword|Type|Filters|Traits|Chance` lines for destruction keywords.
+        // Filters are display names: `Name` is exact, `*text` is contained, and a leading `-` excludes; commas separate alternatives.
+        static List<DestructionRule> ReadDestructionRules(string path)
+        {
+            var rules = new List<DestructionRule>();
+            foreach (var line in File.ReadLines(path))
+            {
+                var entry = line.Split('=', 2, StringSplitOptions.TrimEntries);
+                if (entry.Length < 2 || !entry[0].Equals("Keyword", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
 
-                if (!HasResolvableName(miscItemRecord))
-                {
-                    Console.WriteLine("Skipping misc item " + miscItemRecord.FormKey + " from " + miscItemGetter.ModKey + " because its name could not be resolved.");
-                    continue;
-                }
-
-                patchINIitems<IMiscItemGetter, IMiscItem>(
-                    miscItemRecord,
-                    miscItemGetter.ModKey,
-                    () => state.PatchMod.MiscItems.GetOrAddAsOverride(miscItemRecord));
-            }
-        }
-
-        static void addDestruction(dynamic myObject)
-        {
-            myObject.Destructible = new Destructible();
-            myObject.Destructible.Data = new DestructableData();
-            myObject.Destructible.Data.Health = 8;
-            myObject.Destructible.Data.DESTCount = 8;
-            myObject.Destructible.Stages.AddRange(Program.destructionStages.EmptyIfNull());
-
-        }
-
-        static void ProcessIniSection(IEnumerable<string> items, Dictionary<string, string> targetDict, string sectionName)
-        {
-            foreach (var item in items)
-            {
-                if (!TryParseIniEntry(item, out var itemName, out var itemType))
+                var fields = entry[1].Split('|', StringSplitOptions.TrimEntries);
+                if (!destructionKeywords.Contains(fields[0]))
                 {
                     continue;
                 }
 
-                if (itemName.StartsWith("-", StringComparison.Ordinal))
+                var filters = fields.Length > 2 ? fields[2].Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) : [];
+                var names = filters.Where(filter => !filter.StartsWith('-')).ToArray();
+                var traits = fields.Length > 3 ? fields[3] : "";
+                var chance = fields.Length > 4 ? fields[4] : "";
+                if (names.Length == 0 || names.Any(IsOmitted) || filters.Any(filter => filter.Contains('+')) ||
+                    !IsOmitted(traits) || !(IsOmitted(chance) || chance == "100"))
                 {
-                    Program.exclusionsDict[Regex.Replace(itemName, "-", "").ToLowerInvariant()] = sectionName;
+                    Console.WriteLine("Skipping unsupported ThrowStuff_KID.ini rule: " + line.Trim());
+                    continue;
                 }
-                else
-                {
-                    targetDict[itemName] = itemType;
-                }
+
+                var exclusions = filters.Where(filter => filter.StartsWith('-')).Select(filter => filter[1..]).ToArray();
+                rules.Add(new DestructionRule(fields[0], fields[1], names, exclusions));
             }
+            return rules;
+
+            // KID treats empty and NONE fields as omitted.
+            static bool IsOmitted(string field) => field.Length == 0 || field.Equals("NONE", StringComparison.OrdinalIgnoreCase);
         }
 
-        static bool TryParseIniEntry(string rawItem, out string itemName, out string itemType)
+        static string? FindDestructionKeyword(List<DestructionRule> rules, string itemType, ITranslatedNamedGetter item)
         {
-            itemName = string.Empty;
-            itemType = string.Empty;
-
-            if (string.IsNullOrWhiteSpace(rawItem))
+            var name = item.Name?.String;
+            if (name == null)
             {
-                return false;
+                return null;
             }
 
-            var normalized = rawItem.Trim();
-            var firstPipe = normalized.IndexOf("|", StringComparison.Ordinal);
-            var lastPipe = normalized.LastIndexOf("|", StringComparison.Ordinal);
-
-            if (firstPipe == -1 || lastPipe == -1 || lastPipe <= firstPipe)
-            {
-                return false;
-            }
-
-            itemType = normalized.Substring(firstPipe + 1, lastPipe - firstPipe - 1).Trim();
-            itemName = normalized.Substring(lastPipe + 1).Trim();
-
-            return itemType.Length > 0 && itemName.Length > 0;
+            return rules.FirstOrDefault(rule =>
+                rule.ItemType.Equals(itemType, StringComparison.OrdinalIgnoreCase) &&
+                rule.Names.Any(filter => NameMatches(name, filter)) &&
+                !rule.Exclusions.Any(filter => NameMatches(name, filter)))?.Keyword;
         }
 
-        static bool HasResolvableName(INamedGetter record)
+        static bool NameMatches(string name, string filter)
         {
-            return !string.IsNullOrWhiteSpace(GetNameString(record));
+            return filter.StartsWith('*')
+                ? name.Contains(filter[1..], StringComparison.OrdinalIgnoreCase)
+                : name.Equals(filter, StringComparison.OrdinalIgnoreCase);
         }
 
-        static string? GetNameString(INamedGetter record)
+        static bool IsPotionOrPoison(IIngestibleGetter ingestible)
         {
-            if (record is ITranslatedNamedGetter translatedNamed)
-            {
-                var translated = translatedNamed.Name;
-                if (translated == null)
-                {
-                    return null;
-                }
-
-                if (!string.IsNullOrWhiteSpace(translated.String))
-                {
-                    return translated.String;
-                }
-
-                if (translated.TryLookup(TranslatedString.DefaultLanguage, out var defaultLanguageName) &&
-                    !string.IsNullOrWhiteSpace(defaultLanguageName))
-                {
-                    return defaultLanguageName;
-                }
-
-                if (translated.TryLookup(translated.TargetLanguage, out var targetLanguageName) &&
-                    !string.IsNullOrWhiteSpace(targetLanguageName))
-                {
-                    return targetLanguageName;
-                }
-            }
-
-            var nameValue = record.Name;
-            if (!string.IsNullOrWhiteSpace(nameValue))
-            {
-                return nameValue;
-            }
-
-            if (record is IMajorRecordGetter major && !string.IsNullOrWhiteSpace(major.EditorID))
-            {
-                return major.EditorID;
-            }
-
-            return null;
+            var name = ingestible.Name?.String ?? string.Empty;
+            return name.Contains("potion", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("poison", StringComparison.OrdinalIgnoreCase) ||
+                ingestible.Keywords.EmptyIfNull().Any(keyword =>
+                    keyword.FormKey == Skyrim.Keyword.VendorItemPotion.FormKey ||
+                    keyword.FormKey == Skyrim.Keyword.VendorItemPoison.FormKey) ||
+                ingestible.Flags.HasFlag(Ingestible.Flag.Poison) ||
+                (!ingestible.Flags.HasFlag(Ingestible.Flag.FoodItem) && !ingestible.Flags.HasFlag(Ingestible.Flag.Medicine));
         }
 
-        static void patchINIitems<TGetter, TSetter>(TGetter myObject, ModKey modKey, Func<TSetter> getOrAddOverride)
-            where TGetter : class, INamedGetter, ISkyrimMajorRecordGetter, IHasDestructibleGetter
-            where TSetter : class, TGetter, IHasDestructible
+        // Returns the patched override, or null when the override would lose the record's name.
+        static TMajor? AddDestruction<TMajor, TMajorGetter>(
+            ISkyrimMod patchMod,
+            IModContext<ISkyrimMod, ISkyrimModGetter, TMajor, TMajorGetter> context,
+            string label)
+            where TMajor : class, ISkyrimMajorRecord, TMajorGetter, IHasDestructible
+            where TMajorGetter : class, ISkyrimMajorRecordGetter
         {
-
-#if DEBUG
-            if (myObject.Name?.Contains("flour", StringComparison.OrdinalIgnoreCase) ?? false)
-                System.Diagnostics.Debugger.Break();
-#endif
-            string type = myObject switch
+            var name = context.Record switch
             {
-                IIngestibleGetter => "Potion",
-                IMiscItemGetter => "Misc Item",
-                IIngredientGetter => "Ingredient",
-                _ => myObject.GetType().Name
+                ITranslatedNamedGetter named => named.Name,
+                ITranslatedNamedRequiredGetter named => named.Name,
+                _ => null,
             };
 
-            TSetter? editable = null;
-            TSetter EnsureEditable()
+            // A localized name whose string could not be read would be written to the override as an empty name.
+            if (name != null && name.String == null)
             {
-                editable ??= getOrAddOverride();
-                return editable;
+                Console.WriteLine("Skipped " + label + " " + context.Record.FormKey + " from " + context.ModKey + " because its name could not be read.");
+                return null;
             }
 
-            // Patch Alcohol
-            if (Program.alcoholDict.Any(alcohol =>
-                isValidObject(alcohol, myObject, type, "Alcohol")))
+            var record = context.GetOrAddAsOverride(patchMod);
+            record.Destructible = new Destructible
             {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " Alcohol \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " Alcohol \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch Glass
-            if (Program.glassDict.Any(glass =>
-            isValidObject(glass, myObject, type, "MaterialGlass")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " Glass Object \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " Glass Object \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-            }
-
-            // Patch soups
-            if (Program.soupDict.Any(soup =>
-                isValidObject(soup, myObject, type, "isSoup")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " Soup \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " Soup \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch WhiteDustBombBig
-            if (Program.whiteBombBigDict.Any(bomb =>
-                isValidObject(bomb, myObject, type, "WhiteDustBombBig")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " WhiteDustBombBig \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " WhiteDustBombBig \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch WhiteDustBombSmall
-            if (Program.whiteBombSmallDict.Any(bomb =>
-                isValidObject(bomb, myObject, type, "WhiteDustBombSmall")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " WhiteDustBombSmall \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " WhiteDustBombSmall \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch BlackDustBombBig
-            if (Program.blackBombBigDict.Any(bomb =>
-                isValidObject(bomb, myObject, type, "BlackDustBombBig")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " BlackDustBombBig \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " BlackDustBombBig \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch BlackDustBombSmall
-            if (Program.blackBombSmallDict.Any(bomb =>
-                isValidObject(bomb, myObject, type, "BlackDustBombSmall")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " BlackDustBombSmall \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " BlackDustBombSmall \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch Coin purses
-            if (Program.purseDict.Any(purse =>
-                isValidObject(purse, myObject, type, "PurseLarge")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " Coin purse \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " Coin purse \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch nullWhite
-            if (Program.nullwhiteDict.Any(bomb =>
-                isValidObject(bomb, myObject, type, "nullWhite")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " nullWhite \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " nullWhite \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch Firebomb
-            if (Program.firebombDict.Any(bomb =>
-                isValidObject(bomb, myObject, type, "FireBomb")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " Firebomb \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " Firebomb \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch Oilbomb
-            if (Program.oilbombDict.Any(bomb =>
-                isValidObject(bomb, myObject, type, "OilBomb")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " Oilbomb \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " Oilbomb \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch Frostbomb
-            if (Program.frostbombDict.Any(bomb =>
-                isValidObject(bomb, myObject, type, "FrostBomb")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " Frostbomb \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " Frostbomb \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch Shockbomb
-            if (Program.shockbombDict.Any(bomb =>
-                isValidObject(bomb, myObject, type, "ShockBomb")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " Shockbomb \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " Shockbomb \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch Poisonbomb
-            if (Program.poisonbombDict.Any(bomb =>
-                isValidObject(bomb, myObject, type, "PoisonBomb")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " Poisonbomb \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " Poisonbomb \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch Potion
-            if (Program.potionDict.Any(potion =>
-                isValidObject(potion, myObject, type, "isPotion")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " Potion \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " Potion \"" + target?.Name + "\" from " + modKey);
-                }
-                return;
-
-            }
-
-            // Patch Poison
-            if (Program.poisonDict.Any(poison =>
-                isValidObject(poison, myObject, type, "IsPoison")))
-            {
-                var target = EnsureEditable();
-                addDestruction(target);
-                if (target?.Destructible?.Stages.Count == 8)
-                {
-                    Console.WriteLine("Added destruction to " + type + " Poison \"" + target.Name + "\" from " + modKey);
-                }
-                else
-                {
-                    Console.WriteLine("Failed to add destruction to " + type + " Poison \"" + target?.Name + "\" from " + modKey);
-                }
-            }
-        }
-
-        static bool isValidObject<T>(KeyValuePair<string, string> entry, T myObject, string type, string section)
-            where T : INamedGetter
-        {
-            var objectName = GetNameString(myObject);
-            if (string.IsNullOrWhiteSpace(objectName))
-            {
-                return false;
-            }
-
-            if (!string.Equals(entry.Value, type, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            var normalizedName = objectName!.ToLowerInvariant();
-            var normalizedEntry = entry.Key.ToLowerInvariant();
-            var normalizedPattern = Regex.Replace(normalizedEntry, "-|\\+|\\*", "");
-            var hasWildcard = entry.Key.IndexOf('*') >= 0;
-            var matches = hasWildcard
-                ? normalizedName.Contains(normalizedPattern, StringComparison.Ordinal)
-                : normalizedEntry.Equals(normalizedName, StringComparison.Ordinal);
-
-            if (!matches)
-            {
-                return false;
-            }
-
-            return !(Program.exclusionsDict.TryGetValue(normalizedName, out var exclusionType) &&
-                string.Equals(exclusionType, section, StringComparison.OrdinalIgnoreCase));
+                Data = new DestructableData { Health = 8, DESTCount = 8 },
+            };
+            record.Destructible.Stages.AddRange(destructionStages.EmptyIfNull());
+            Console.WriteLine("Added destruction to " + label + " \"" + name?.String + "\" from " + context.ModKey);
+            return record;
         }
     }
 }
